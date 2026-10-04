@@ -1,7 +1,8 @@
 function toNumber(value) {
-  if (typeof value === "number") return value;
-  if (typeof value !== "string") return 0;
-  const number = Number(value.replace(/[₹,\s]/g, ""));
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (value == null) return 0;
+  const cleaned = String(value).replace(/[₹,\s%]/g, "");
+  const number = Number(cleaned);
   return Number.isFinite(number) ? number : 0;
 }
 
@@ -19,21 +20,43 @@ function normalizeDate(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function first(row, keys) {
+  for (const key of keys) {
+    if (row?.[key] !== undefined && row?.[key] !== null && String(row[key]).trim() !== "") {
+      return row[key];
+    }
+  }
+  return null;
+}
+
 function normalizeSales(payload) {
   return getRows(payload).map((row) => ({
-    date: row.date ?? row.Date ?? row.created_at ?? row.createdAt ?? null,
-    manager: row.manager ?? row.Manager ?? null,
-    tl: row.tl ?? row.TL ?? row.team_leader ?? row.teamLeader ?? null,
-    counselor: row.counselor ?? row.Counselor ?? null,
-    revenue: toNumber(row.revenue ?? row.Revenue ?? row.amount ?? row.Amount),
-    product: row.product ?? row.Product ?? null,
-    orderId: row.orderId ?? row.order_id ?? row["Order ID"] ?? row.order ?? null
+    date: first(row, ["date","Date","created_at","createdAt","order_date","Order Date"]),
+    manager: first(row, ["manager","Manager","manager_name","Manager Name"]),
+    tl: first(row, ["tl","TL","team_leader","teamLeader","team_leader_name","TL Name"]),
+    counselor: first(row, ["counselor","Counselor","counsellor","Counsellor","counselor_name","Counselor Name","agent","Agent"]),
+    revenue: toNumber(first(row, ["revenue","Revenue","amount","Amount","paid_amount","Paid Amount","net_revenue","Net Revenue"])),
+    product: first(row, ["product","Product","course","Course","product_name","Product Name","course_name","Course Name"]),
+    orderId: first(row, ["orderId","order_id","Order ID","order","Order","transaction_id","Transaction ID"])
   }));
+}
+
+function filterPeriod(records, period, referenceDate = new Date()) {
+  return records.filter((record) => {
+    const date = normalizeDate(record.date);
+    if (!date) return false;
+    if (period === "today") {
+      return date.getFullYear() === referenceDate.getFullYear() &&
+        date.getMonth() === referenceDate.getMonth() &&
+        date.getDate() === referenceDate.getDate();
+    }
+    return date.getFullYear() === referenceDate.getFullYear() &&
+      date.getMonth() === referenceDate.getMonth();
+  });
 }
 
 function aggregateBy(records, field, label) {
   const totals = new Map();
-
   for (const record of records) {
     const key = record[field] || "Unknown";
     const current = totals.get(key) || { [label]: key, revenue: 0, orders: 0 };
@@ -41,60 +64,133 @@ function aggregateBy(records, field, label) {
     current.orders += 1;
     totals.set(key, current);
   }
-
   return [...totals.values()].sort((a, b) => b.revenue - a.revenue);
 }
 
-function managerWiseRevenue(records) {
-  return aggregateBy(records, "manager", "manager");
+function managerWiseRevenue(records) { return aggregateBy(records, "manager", "manager"); }
+function tlWiseRevenue(records) { return aggregateBy(records, "tl", "tl"); }
+function counselorWiseRevenue(records) { return aggregateBy(records, "counselor", "counselor"); }
+function productWiseRevenue(records) { return aggregateBy(records, "product", "product"); }
+
+function hierarchy(records, referenceDate = new Date()) {
+  const mtd = filterPeriod(records, "mtd", referenceDate);
+  const today = filterPeriod(records, "today", referenceDate);
+  const keyOf = (r, fields) => fields.map(f => r[f] || "Unknown").join("|||");
+  const build = (rows, fields, labels) => {
+    const map = new Map();
+    for (const r of rows) {
+      const key = keyOf(r, fields);
+      if (!map.has(key)) {
+        const item = { revenue: 0, orders: 0 };
+        fields.forEach((f, i) => item[labels[i]] = r[f] || "Unknown");
+        map.set(key, item);
+      }
+      const item = map.get(key);
+      item.revenue += r.revenue;
+      item.orders += 1;
+    }
+    return [...map.values()].sort((a,b) => b.revenue - a.revenue);
+  };
+  return {
+    managers: hierarchyLevel(mtd, today, ["manager"], "manager"),
+    tls: hierarchyLevel(mtd, today, ["manager","tl"], "tl"),
+    counselors: hierarchyLevel(mtd, today, ["manager","tl","counselor"], "counselor"),
+    products: hierarchyLevel(mtd, today, ["product"], "product")
+  };
 }
 
-function tlWiseRevenue(records) {
-  return aggregateBy(records, "tl", "tl");
+function hierarchyLevel(mtd, today, fields, label) {
+  const keyOf = r => fields.map(f => r[f] || "Unknown").join("|||");
+  const m = new Map(), t = new Map();
+  for (const r of mtd) {
+    const key = keyOf(r);
+    if (!m.has(key)) m.set(key, { [label]: r[fields[fields.length-1]] || "Unknown", revenue:0, orders:0, ...Object.fromEntries(fields.map(f=>[f,r[f]||"Unknown"])) });
+    const x=m.get(key); x.revenue+=r.revenue; x.orders++;
+  }
+  for (const r of today) {
+    const key=keyOf(r);
+    if (!t.has(key)) t.set(key,0);
+    t.set(key,t.get(key)+r.revenue);
+  }
+  return [...m.entries()].map(([key,x])=>({...x,todayRevenue:t.get(key)||0})).sort((a,b)=>b.revenue-a.revenue);
 }
 
-function isSameDay(dateValue, referenceDate = new Date()) {
-  const date = normalizeDate(dateValue);
-  if (!date) return false;
-
-  return (
-    date.getFullYear() === referenceDate.getFullYear() &&
-    date.getMonth() === referenceDate.getMonth() &&
-    date.getDate() === referenceDate.getDate()
-  );
+function parseJsonEnv(name, fallback) {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  try { return JSON.parse(raw); } catch { return fallback; }
 }
 
-function isSameMonth(dateValue, referenceDate = new Date()) {
-  const date = normalizeDate(dateValue);
-  if (!date) return false;
+function targetFor(targets, type, name) {
+  const value = targets?.[type]?.[name] ?? targets?.[type]?.default ?? 0;
+  return toNumber(value);
+}
 
-  return (
-    date.getFullYear() === referenceDate.getFullYear() &&
-    date.getMonth() === referenceDate.getMonth()
-  );
+function incentiveFor(revenue, slabs) {
+  let matched = null;
+  for (const slab of slabs) {
+    const threshold = toNumber(slab.threshold);
+    if (revenue >= threshold && (!matched || threshold > matched.threshold)) {
+      matched = { threshold, incentive: toNumber(slab.incentive) };
+    }
+  }
+  const sorted = slabs.map(s => ({ threshold: toNumber(s.threshold), incentive: toNumber(s.incentive) }))
+    .filter(s => s.threshold > revenue).sort((a,b)=>a.threshold-b.threshold);
+  const next = sorted[0] || null;
+  return { current: matched, next, gapToNext: next ? Math.max(0, next.threshold - revenue) : 0 };
+}
+
+function enrich(rows, targetType, targets, slabs) {
+  return rows.map(row => {
+    const target = targetFor(targets, targetType, row[targetType]);
+    const achievement = target > 0 ? (row.revenue / target) * 100 : null;
+    return {
+      ...row,
+      target,
+      achievement,
+      incentive: incentiveFor(row.revenue, slabs)
+    };
+  });
+}
+
+function buildSummary(records, referenceDate = new Date()) {
+  const todayRecords = filterPeriod(records, "today", referenceDate);
+  const mtdRecords = filterPeriod(records, "mtd", referenceDate);
+  const sum = rows => rows.reduce((total,row)=>total+row.revenue,0);
+  const targets = parseJsonEnv("SALES_TARGETS_JSON", {});
+  const slabs = parseJsonEnv("INCENTIVE_SLABS_JSON", []);
+  const managers = hierarchyLevel(mtdRecords,todayRecords,["manager"],"manager");
+  const tls = hierarchyLevel(mtdRecords,todayRecords,["manager","tl"],"tl");
+  const counselors = hierarchyLevel(mtdRecords,todayRecords,["manager","tl","counselor"],"counselor");
+  const products = hierarchyLevel(mtdRecords,todayRecords,["product"],"product");
+  return {
+    generatedAt: new Date().toISOString(),
+    totalRevenue: sum(records),
+    totalOrders: records.length,
+    todayRevenue: sum(todayRecords),
+    todayOrders: todayRecords.length,
+    mtdRevenue: sum(mtdRecords),
+    mtdOrders: mtdRecords.length,
+    managers: enrich(managers,"manager",targets,slabs),
+    tls: enrich(tls,"tl",targets,slabs),
+    counselors: enrich(counselors,"counselor",targets,slabs),
+    products: products.map(p=>({...p, contribution: sum(mtdRecords)>0 ? (p.revenue/sum(mtdRecords))*100 : 0})),
+    managerRevenue: enrich(managerWiseRevenue(records),"manager",targets,slabs),
+    tlRevenue: enrich(tlWiseRevenue(records),"tl",targets,slabs),
+    incentiveSlabs: slabs
+  };
 }
 
 function summary(records, referenceDate = new Date()) {
-  const todayRecords = records.filter((record) => isSameDay(record.date, referenceDate));
-  const mtdRecords = records.filter((record) => isSameMonth(record.date, referenceDate));
-
-  const sumRevenue = (rows) => rows.reduce((sum, row) => sum + row.revenue, 0);
-
-  return {
-    totalRevenue: sumRevenue(records),
-    totalOrders: records.length,
-    todayRevenue: sumRevenue(todayRecords),
-    todayOrders: todayRecords.length,
-    mtdRevenue: sumRevenue(mtdRecords),
-    mtdOrders: mtdRecords.length,
-    managerRevenue: managerWiseRevenue(records),
-    tlRevenue: tlWiseRevenue(records)
-  };
+  return buildSummary(records, referenceDate);
 }
 
 module.exports = {
   normalizeSales,
   managerWiseRevenue,
   tlWiseRevenue,
-  summary
+  counselorWiseRevenue,
+  productWiseRevenue,
+  summary,
+  buildSummary
 };
