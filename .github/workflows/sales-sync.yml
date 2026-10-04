@@ -1,0 +1,24 @@
+name: Testbook Sales Sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 * * * *"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      TESTBOOK_API_URL: ${{ secrets.TESTBOOK_API_URL }}
+      TESTBOOK_API_KEY: ${{ secrets.TESTBOOK_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm install
+      - run: npm run sync
