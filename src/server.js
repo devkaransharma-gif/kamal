@@ -32,7 +32,7 @@ function sessionToken() {
 }
 function validSession(req) {
   const expected=sessionToken(), actual=parseCookies(req).dashboard_session||"";
-  return Boolean(expected && actual && crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected)));
+  return Boolean(expected && actual && actual.length === expected.length && crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected)));
 }
 function loginPage(error=false) {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Testbook Dashboard Login</title><style>body{font-family:Arial;background:#f5f7fb;display:flex;justify-content:center;align-items:center;min-height:100vh}.box{background:white;padding:30px;border-radius:14px;width:340px;box-shadow:0 8px 30px #0001}input,button{width:100%;box-sizing:border-box;padding:12px;margin:8px 0}button{background:#111827;color:white;border:0;border-radius:8px}.error{color:#b91c1c}</style></head><body><div class="box"><h2>Testbook Dashboard</h2>${error?"<p class='error'>Invalid username or password.</p>":""}<form method="post" action="/login"><input name="username" placeholder="Username" required><input name="password" type="password" placeholder="Password" required><button type="submit">Sign in</button></form></div></body></html>`;
