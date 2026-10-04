@@ -1,16 +1,56 @@
 require("dotenv").config();
+const { parse } = require("csv-parse/sync");
 
 async function getTestbookSales() {
-  if (!process.env.TESTBOOK_API_URL) throw new Error("TESTBOOK_API_URL is not configured");
-  if (!process.env.TESTBOOK_API_KEY) throw new Error("TESTBOOK_API_KEY is not configured");
+  const apiUrl = process.env.TESTBOOK_API_URL;
+  const apiKey = process.env.TESTBOOK_API_KEY;
 
-  const url = new URL(process.env.TESTBOOK_API_URL);
-  url.searchParams.set("api_key", process.env.TESTBOOK_API_KEY);
+  if (!apiUrl) throw new Error("TESTBOOK_API_URL is not configured");
+  if (!apiKey) throw new Error("TESTBOOK_API_KEY is not configured");
 
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Testbook API error: ${response.status}`);
+  let url;
+  try {
+    url = new URL(apiUrl);
+  } catch {
+    throw new Error("TESTBOOK_API_URL is not a valid URL");
+  }
 
-  return response.json();
+  url.searchParams.set("api_key", apiKey);
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: "text/csv, application/json"
+    }
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    const detail = body.replace(/api_key=[^&\s]*/gi, "api_key=[REDACTED]").slice(0, 300);
+    throw new Error(`Testbook API error: ${response.status}${detail ? ` - ${detail}` : ""}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  const body = await response.text();
+
+  if (contentType.includes("json") || apiUrl.endsWith(".json")) {
+    try {
+      return JSON.parse(body);
+    } catch {
+      throw new Error("Testbook API returned invalid JSON");
+    }
+  }
+
+  try {
+    return parse(body, {
+      columns: true,
+      skip_empty_lines: true,
+      bom: true,
+      relax_column_count: true,
+      trim: true
+    });
+  } catch {
+    throw new Error("Testbook API returned data that could not be parsed as CSV");
+  }
 }
 
 module.exports = { getTestbookSales };
