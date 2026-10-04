@@ -62,7 +62,28 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { status: "ok" });
     }
 
-    if (!requireAuth(req, res)) return;
+    if (requestUrl.pathname === "/login" && req.method === "GET") {
+      res.writeHead(200, {"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});
+      return res.end(loginPage());
+    }
+
+    if (requestUrl.pathname === "/login" && req.method === "POST") {
+      let body = "";
+      for await (const chunk of req) body += chunk;
+      const form = new URLSearchParams(body);
+      if (form.get("username") !== DASHBOARD_USER || form.get("password") !== DASHBOARD_PASSWORD) {
+        res.writeHead(401, {"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});
+        return res.end(loginPage(true));
+      }
+      res.writeHead(302, {
+        Location: "/dashboard",
+        "Set-Cookie": "dashboard_session=" + encodeURIComponent(sessionToken()) + "; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Lax",
+        "Cache-Control": "no-store"
+      });
+      return res.end();
+    }
+
+    if (!requireSession(req, res)) return;
 
     if (requestUrl.pathname === "/" || requestUrl.pathname === "/dashboard") {
       return sendHtml(res);
