@@ -35,7 +35,7 @@ function normalizeDate(value) {
   }
 
   // Explicitly parse common DD/MM/YYYY, DD-MM-YYYY and DD.MM.YYYY formats.
-  const dmy = raw.match(/^(\\d{1,2})[\\/\\-.](\\d{1,2})[\\/\\-.](\\d{4})(?:[ T].*)?$/);
+  const dmy = raw.match(/^(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})(?:[ T].*)?$/);
   if (dmy) {
     const day = Number(dmy[1]);
     const month = Number(dmy[2]) - 1;
