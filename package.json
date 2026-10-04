@@ -9,6 +9,7 @@
     "sync": "node src/sync.js"
   },
   "dependencies": {
+    "csv-parse": "^6.1.0",
     "dotenv": "^16.4.7"
   }
 }
