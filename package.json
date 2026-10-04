@@ -1,0 +1,14 @@
+{
+  "name": "testbook-sales-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Testbook sales data pipeline and manager-wise revenue dashboard API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "sync": "node src/sync.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  }
+}
