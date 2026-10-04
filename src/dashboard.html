@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Testbook Sales Dashboard</title>
+  <style>
+    body{font-family:Inter,system-ui,sans-serif;margin:0;background:#f6f7fb;color:#172033}
+    .wrap{max-width:1200px;margin:0 auto;padding:28px}
+    h1{margin:0 0 6px}.muted{color:#667085}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:24px 0}
+    .card,.panel{background:#fff;border:1px solid #e6e8ee;border-radius:14px;padding:18px;box-shadow:0 2px 8px rgba(16,24,40,.04)}
+    .label{font-size:13px;color:#667085}.value{font-size:28px;font-weight:700;margin-top:8px}
+    .tabs{display:flex;gap:8px;margin-bottom:14px}.tab{border:1px solid #d0d5dd;background:#fff;border-radius:9px;padding:9px 14px;cursor:pointer}.tab.active{background:#172033;color:#fff}
+    table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;border-bottom:1px solid #eef0f4}th{font-size:12px;color:#667085;text-transform:uppercase}
+    .right{text-align:right}.status{margin-left:10px;font-size:13px}.error{color:#b42318}
+    @media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.wrap{padding:16px}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Testbook Sales Dashboard</h1>
+  <div class="muted">Live sales summary from the Testbook API</div>
+  <div id="status" class="muted">Loading…</div>
+
+  <div class="grid">
+    <div class="card"><div class="label">Today Revenue</div><div id="todayRevenue" class="value">—</div></div>
+    <div class="card"><div class="label">MTD Revenue</div><div id="mtdRevenue" class="value">—</div></div>
+    <div class="card"><div class="label">Today Orders</div><div id="todayOrders" class="value">—</div></div>
+    <div class="card"><div class="label">MTD Orders</div><div id="mtdOrders" class="value">—</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="tabs">
+      <button class="tab active" data-tab="manager">Manager-wise</button>
+      <button class="tab" data-tab="tl">TL-wise</button>
+    </div>
+    <table>
+      <thead><tr><th>Rank</th><th id="nameHeader">Manager</th><th class="right">Revenue</th><th class="right">Orders</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="4">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<script>
+let data=null, mode="manager";
+const money=n=>"₹"+Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:0});
+async function load(){
+  const status=document.getElementById("status");
+  try{
+    const r=await fetch("/sales/summary",{cache:"no-store"});
+    if(!r.ok) throw new Error("API returned "+r.status);
+    data=await r.json();
+    document.getElementById("todayRevenue").textContent=money(data.todayRevenue);
+    document.getElementById("mtdRevenue").textContent=money(data.mtdRevenue);
+    document.getElementById("todayOrders").textContent=(data.todayOrders||0).toLocaleString("en-IN");
+    document.getElementById("mtdOrders").textContent=(data.mtdOrders||0).toLocaleString("en-IN");
+    status.textContent="Updated "+new Date().toLocaleString("en-IN");
+    render();
+  }catch(e){status.innerHTML='<span class="error">Dashboard error: '+e.message+'</span>'}
+}
+function render(){
+  const list=mode==="manager"?data.managerRevenue:data.tlRevenue;
+  document.getElementById("nameHeader").textContent=mode==="manager"?"Manager":"TL";
+  document.getElementById("rows").innerHTML=list.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+escapeHtml(x[mode])+'</td><td class="right">'+money(x.revenue)+'</td><td class="right">'+(x.orders||0).toLocaleString("en-IN")+'</td></tr>').join("");
+}
+function escapeHtml(v){return String(v??"Unknown").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");mode=b.dataset.tab;render()});
+load(); setInterval(load,60000);
+</script>
+</body>
+</html>
