@@ -51,7 +51,7 @@ function normalizeSales(payload) {
     counselor: first(row, ["counselor","Counselor","counsellor","Counsellor","counselor_name","Counselor Name","agent","Agent","Sale_Agent","Sale Agent"]),
     revenue: toNumber(first(row, ["revenue","Revenue","amount","Amount","paid_amount","Paid Amount","net_revenue","Net Revenue","Sale_Amount","Sale Amount"])),
     product: first(row, ["product","Product","course","Course","product_name","Product Name","course_name","Course Name","Sale_Product","Sale Product"]),
-    orderId: first(row, ["orderId","order_id","Order ID","order","Order","transaction_id","Transaction ID"])
+    orderId: first(row, ["orderId","order_id","Order ID","order","Order","transaction_id","Transaction ID","Sale_Number","Sale Number"])
   }));
 }
 
@@ -168,6 +168,15 @@ function enrich(rows, targetType, targets, slabs) {
 }
 
 function buildSummary(records, referenceDate = new Date()) {
+  const validDateRecords = records.filter(r => normalizeDate(r.date));
+  const revenueRecords = records.filter(r => Number.isFinite(r.revenue) && r.revenue !== 0);
+  console.log("NORMALIZED SALES:", JSON.stringify({
+    records: records.length,
+    validDates: validDateRecords.length,
+    revenueRows: revenueRecords.length,
+    totalRevenue: records.reduce((sum, r) => sum + r.revenue, 0),
+    referenceDate: referenceDate.toISOString().slice(0, 10)
+  }));
   const todayRecords = filterPeriod(records, "today", referenceDate);
   const mtdRecords = filterPeriod(records, "mtd", referenceDate);
   const sum = rows => rows.reduce((total,row)=>total+row.revenue,0);
