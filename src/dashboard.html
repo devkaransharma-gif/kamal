@@ -34,7 +34,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;bor
 let data=null,mode="managers";
 const money=n=>"₹"+Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:0});
 const pct=n=>n==null?"—":Number(n).toFixed(1)+"%";
-const esc=v=>String(v??"Unknown").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#39;"}[c]));
+const esc=v=>String(v??"Unknown").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 function badge(a){if(a==null)return '<span class="badge neutral">No target</span>';const c=a>=100?"good":a>=80?"warn":"bad";return '<span class="badge '+c+'">'+pct(a)+'</span>'}
 async function load(){
  try{const r=await fetch("/sales/summary",{cache:"no-store"});if(!r.ok)throw new Error("API returned "+r.status);data=await r.json();
