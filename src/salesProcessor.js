@@ -15,22 +15,60 @@ function getRows(payload) {
 }
 
 function normalizeDate(value) {
-  if (!value) return null;
-  const raw = String(value).trim();
-  const direct = new Date(raw);
-  if (!Number.isNaN(direct.getTime())) return direct;
+  if (value == null || value === "") return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
 
-  // Handle common Indian/CSV date formats such as DD/MM/YYYY and DD-MM-YYYY.
-  const match = raw.match(/^(\\d{1,2})[\\/\\-](\\d{1,2})[\\/\\-](\\d{4})(?:[ T].*)?$/);
-  if (match) {
-    const day = Number(match[1]);
-    const month = Number(match[2]) - 1;
-    const year = Number(match[3]);
+  // Excel/CSV serial date support.
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const parsed = new Date(Date.UTC(1899, 11, 30) + value * 86400000);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  // Unix timestamp support (seconds or milliseconds).
+  if (/^\\d{10,13}$/.test(raw)) {
+    const n = Number(raw);
+    const parsed = new Date(raw.length === 10 ? n * 1000 : n);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+
+  // Explicitly parse common DD/MM/YYYY, DD-MM-YYYY and DD.MM.YYYY formats.
+  const dmy = raw.match(/^(\\d{1,2})[\\/\\-.](\\d{1,2})[\\/\\-.](\\d{4})(?:[ T].*)?$/);
+  if (dmy) {
+    const day = Number(dmy[1]);
+    const month = Number(dmy[2]) - 1;
+    const year = Number(dmy[3]);
     const parsed = new Date(year, month, day);
     if (parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day) {
       return parsed;
     }
   }
+
+  // YYYY/MM/DD and YYYY-MM-DD variants.
+  const ymd = raw.match(/^(\\d{4})[\\/\\-.](\\d{1,2})[\\/\\-.](\\d{1,2})(?:[ T].*)?$/);
+  if (ymd) {
+    const year = Number(ymd[1]);
+    const month = Number(ymd[2]) - 1;
+    const day = Number(ymd[3]);
+    const parsed = new Date(year, month, day);
+    if (parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day) {
+      return parsed;
+    }
+  }
+
+  // Standard ISO/RFC date strings. Date.parse supports the standardized date-time format.
+  const timestamp = Date.parse(raw);
+  if (!Number.isNaN(timestamp)) return new Date(timestamp);
+
+  // Common textual date format such as "04 Oct 2026".
+  const textual = raw.match(/^(\\d{1,2})[ -]([A-Za-z]{3,9})[ -](\\d{4})(?:[ T].*)?$/);
+  if (textual) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+
   return null;
 }
 
