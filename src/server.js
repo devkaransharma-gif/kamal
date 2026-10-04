@@ -55,22 +55,25 @@ function requireAuth(req, res) {
 
 const server = http.createServer(async (req, res) => {
   try {
-    if (req.url === "/health") {
+    const requestUrl = new URL(req.url, "http://localhost");
+
+    // Render health checks must work without dashboard credentials.
+    if (requestUrl.pathname === "/health") {
       return sendJson(res, 200, { status: "ok" });
     }
 
     if (!requireAuth(req, res)) return;
 
-    if (req.url === "/" || req.url === "/dashboard") {
+    if (requestUrl.pathname === "/" || requestUrl.pathname === "/dashboard") {
       return sendHtml(res);
     }
 
-    if (req.url === "/sales/summary") {
+    if (requestUrl.pathname === "/sales/summary") {
       const records = normalizeSales(await getTestbookSales());
       return sendJson(res, 200, summary(records));
     }
 
-    if (req.url === "/sales/manager-wise") {
+    if (requestUrl.pathname === "/sales/manager-wise") {
       const records = normalizeSales(await getTestbookSales());
       const data = summary(records);
       return sendJson(res, 200, {
@@ -80,7 +83,7 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    if (req.url === "/sales/tl-wise") {
+    if (requestUrl.pathname === "/sales/tl-wise") {
       const records = normalizeSales(await getTestbookSales());
       const data = summary(records);
       return sendJson(res, 200, {
