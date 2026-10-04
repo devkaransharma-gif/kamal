@@ -5,6 +5,8 @@ const { getTestbookSales } = require("./testbookApi");
 const { normalizeSales, summary } = require("./salesProcessor");
 
 const PORT = Number(process.env.PORT || 3000);
+const DASHBOARD_USER = process.env.DASHBOARD_USER;
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD;
 const dashboard = fs.readFileSync(path.join(__dirname, "dashboard.html"), "utf8");
 
 function sendJson(res, status, payload) {
@@ -23,14 +25,44 @@ function sendHtml(res) {
   res.end(dashboard);
 }
 
+function isAuthorized(req) {
+  if (!DASHBOARD_USER || !DASHBOARD_PASSWORD) return false;
+
+  const header = req.headers.authorization || "";
+  if (!header.startsWith("Basic ")) return false;
+
+  const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
+  const separator = decoded.indexOf(":");
+  if (separator < 0) return false;
+
+  const user = decoded.slice(0, separator);
+  const password = decoded.slice(separator + 1);
+
+  return user === DASHBOARD_USER && password === DASHBOARD_PASSWORD;
+}
+
+function requireAuth(req, res) {
+  if (isAuthorized(req)) return true;
+
+  res.writeHead(401, {
+    "WWW-Authenticate": 'Basic realm="Testbook Sales Dashboard"',
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store"
+  });
+  res.end(JSON.stringify({ error: "Authentication required" }));
+  return false;
+}
+
 const server = http.createServer(async (req, res) => {
   try {
-    if (req.url === "/" || req.url === "/dashboard") {
-      return sendHtml(res);
-    }
-
     if (req.url === "/health") {
       return sendJson(res, 200, { status: "ok" });
+    }
+
+    if (!requireAuth(req, res)) return;
+
+    if (req.url === "/" || req.url === "/dashboard") {
+      return sendHtml(res);
     }
 
     if (req.url === "/sales/summary") {
