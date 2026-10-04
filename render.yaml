@@ -16,3 +16,7 @@ services:
         sync: false
       - key: DASHBOARD_PASSWORD
         sync: false
+      - key: SALES_TARGETS_JSON
+        sync: false
+      - key: INCENTIVE_SLABS_JSON
+        sync: false
