@@ -16,8 +16,22 @@ function getRows(payload) {
 
 function normalizeDate(value) {
   if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+  const raw = String(value).trim();
+  const direct = new Date(raw);
+  if (!Number.isNaN(direct.getTime())) return direct;
+
+  // Handle common Indian/CSV date formats such as DD/MM/YYYY and DD-MM-YYYY.
+  const match = raw.match(/^(\\d{1,2})[\\/\\-](\\d{1,2})[\\/\\-](\\d{4})(?:[ T].*)?$/);
+  if (match) {
+    const day = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const year = Number(match[3]);
+    const parsed = new Date(year, month, day);
+    if (parsed.getFullYear() === year && parsed.getMonth() === month && parsed.getDate() === day) {
+      return parsed;
+    }
+  }
+  return null;
 }
 
 function first(row, keys) {
@@ -31,7 +45,7 @@ function first(row, keys) {
 
 function normalizeSales(payload) {
   return getRows(payload).map((row) => ({
-    date: first(row, ["date","Date","created_at","createdAt","order_date","Order Date"]),
+    date: first(row, ["date","Date","created_at","createdAt","createdAtUtc","order_date","Order Date","sale_date","Sale Date","transaction_date","Transaction Date","payment_date","Payment Date","purchase_date","Purchase Date","created_on","Created On","timestamp","Timestamp","datetime","DateTime"]),
     manager: first(row, ["manager","Manager","manager_name","Manager Name"]),
     tl: first(row, ["tl","TL","team_leader","teamLeader","team_leader_name","TL Name"]),
     counselor: first(row, ["counselor","Counselor","counsellor","Counsellor","counselor_name","Counselor Name","agent","Agent"]),
