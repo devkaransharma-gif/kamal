@@ -41,13 +41,22 @@ async function getTestbookSales() {
   }
 
   try {
-    return parse(body, {
+    const rows = parse(body, {
       columns: true,
       skip_empty_lines: true,
       bom: true,
       relax_column_count: true,
       trim: true
     });
+
+    // Safe diagnostics: log only row count and column names, never row values or API credentials.
+    console.log("TESTBOOK DATA:", JSON.stringify({
+      format: "csv",
+      rows: rows.length,
+      columns: Object.keys(rows[0] || {})
+    }));
+
+    return rows;
   } catch {
     throw new Error("Testbook API returned data that could not be parsed as CSV");
   }
