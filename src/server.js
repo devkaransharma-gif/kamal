@@ -1,8 +1,11 @@
 const http = require("node:http");
+const fs = require("node:fs");
+const path = require("node:path");
 const { getTestbookSales } = require("./testbookApi");
 const { normalizeSales, summary } = require("./salesProcessor");
 
 const PORT = Number(process.env.PORT || 3000);
+const dashboard = fs.readFileSync(path.join(__dirname, "dashboard.html"), "utf8");
 
 function sendJson(res, status, payload) {
   res.writeHead(status, {
@@ -12,8 +15,20 @@ function sendJson(res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 
+function sendHtml(res) {
+  res.writeHead(200, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store"
+  });
+  res.end(dashboard);
+}
+
 const server = http.createServer(async (req, res) => {
   try {
+    if (req.url === "/" || req.url === "/dashboard") {
+      return sendHtml(res);
+    }
+
     if (req.url === "/health") {
       return sendJson(res, 200, { status: "ok" });
     }
