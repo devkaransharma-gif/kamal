@@ -25,31 +25,31 @@ function sendHtml(res) {
   res.end(dashboard);
 }
 
-function isAuthorized(req) {
-  if (!DASHBOARD_USER || !DASHBOARD_PASSWORD) return false;
-
-  const header = req.headers.authorization || "";
-  if (!header.startsWith("Basic ")) return false;
-
-  const decoded = Buffer.from(header.slice(6), "base64").toString("utf8");
-  const separator = decoded.indexOf(":");
-  if (separator < 0) return false;
-
-  const user = decoded.slice(0, separator);
-  const password = decoded.slice(separator + 1);
-
-  return user === DASHBOARD_USER && password === DASHBOARD_PASSWORD;
+function parseCookies(req) {
+  const cookies = {};
+  for (const part of (req.headers.cookie || "").split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0) cookies[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return cookies;
 }
 
-function requireAuth(req, res) {
-  if (isAuthorized(req)) return true;
+function sessionToken() {
+  return Buffer.from(DASHBOARD_USER + ":" + DASHBOARD_PASSWORD).toString("base64");
+}
 
-  res.writeHead(401, {
-    "WWW-Authenticate": 'Basic realm="Testbook Sales Dashboard"',
-    "Content-Type": "application/json",
-    "Cache-Control": "no-store"
-  });
-  res.end(JSON.stringify({ error: "Authentication required" }));
+function validSession(req) {
+  return parseCookies(req).dashboard_session === sessionToken();
+}
+
+function loginPage(error = false) {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Testbook Dashboard Login</title><style>body{font-family:Arial;background:#f5f7fb;display:flex;justify-content:center;align-items:center;min-height:100vh}.box{background:white;padding:30px;border-radius:14px;width:340px;box-shadow:0 8px 30px #0001}input,button{width:100%;box-sizing:border-box;padding:12px;margin:8px 0}button{background:#111827;color:white;border:0;border-radius:8px}.error{color:#b91c1c}</style></head><body><div class="box"><h2>Testbook Dashboard</h2>${error ? "<p class='error'>Invalid username or password.</p>" : ""}<form method="post" action="/login"><input name="username" placeholder="Username" required><input name="password" type="password" placeholder="Password" required><button type="submit">Sign in</button></form></div></body></html>`;
+}
+
+function requireSession(req, res) {
+  if (validSession(req)) return true;
+  res.writeHead(302, { Location: "/login" });
+  res.end();
   return false;
 }
 
