@@ -45,12 +45,12 @@ function first(row, keys) {
 
 function normalizeSales(payload) {
   return getRows(payload).map((row) => ({
-    date: first(row, ["date","Date","created_at","createdAt","createdAtUtc","order_date","Order Date","sale_date","Sale Date","transaction_date","Transaction Date","payment_date","Payment Date","purchase_date","Purchase Date","created_on","Created On","timestamp","Timestamp","datetime","DateTime"]),
-    manager: first(row, ["manager","Manager","manager_name","Manager Name"]),
-    tl: first(row, ["tl","TL","team_leader","teamLeader","team_leader_name","TL Name"]),
-    counselor: first(row, ["counselor","Counselor","counsellor","Counsellor","counselor_name","Counselor Name","agent","Agent"]),
-    revenue: toNumber(first(row, ["revenue","Revenue","amount","Amount","paid_amount","Paid Amount","net_revenue","Net Revenue"])),
-    product: first(row, ["product","Product","course","Course","product_name","Product Name","course_name","Course Name"]),
+    date: first(row, ["date","Date","Sale_Date","sale_date","Sale Date","created_at","createdAt","createdAtUtc","order_date","Order Date","transaction_date","Transaction Date","payment_date","Payment Date","purchase_date","Purchase Date","created_on","Created On","timestamp","Timestamp","datetime","DateTime"]),
+    manager: first(row, ["manager","Manager","manager_name","Manager Name","ASM","asm","Sale_Team","Sale Team"]),
+    tl: first(row, ["tl","TL","team_leader","teamLeader","team_leader_name","TL Name","team_name","Team Name"]),
+    counselor: first(row, ["counselor","Counselor","counsellor","Counsellor","counselor_name","Counselor Name","agent","Agent","Sale_Agent","Sale Agent"]),
+    revenue: toNumber(first(row, ["revenue","Revenue","amount","Amount","paid_amount","Paid Amount","net_revenue","Net Revenue","Sale_Amount","Sale Amount"])),
+    product: first(row, ["product","Product","course","Course","product_name","Product Name","course_name","Course Name","Sale_Product","Sale Product"]),
     orderId: first(row, ["orderId","order_id","Order ID","order","Order","transaction_id","Transaction ID"])
   }));
 }
