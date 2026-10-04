@@ -49,7 +49,8 @@ async function getTestbookSales() {
       trim: true
     });
 
-    // Safe diagnostics: log only row count and column names, never row values or API credentials.
+    // Safe diagnostics: log counts only; never row values or API credentials.
+    console.log("SALE FIELD COUNTS:", JSON.stringify({ saleDate: rows.filter(r => r.Sale_Date != null && String(r.Sale_Date).trim() !== "").length, saleAmount: rows.filter(r => r.Sale_Amount != null && String(r.Sale_Amount).trim() !== "").length }));
     console.log("TESTBOOK DATA:", JSON.stringify({
       format: "csv",
       rows: rows.length,
