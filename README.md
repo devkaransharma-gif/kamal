@@ -48,6 +48,20 @@ Required before exposing the dashboard publicly:
 - `DASHBOARD_USER`
 - `DASHBOARD_PASSWORD`
 
+Optional management configuration:
+
+- `SALES_TARGETS_JSON` — target maps by manager, TL, and counselor.
+- `INCENTIVE_SLABS_JSON` — revenue-to-incentive slabs.
+
+Example formats (replace names/values with your actual targets):
+
+```text
+SALES_TARGETS_JSON={"manager":{"Manager A":2500000},"tl":{"TL A":800000},"counselor":{"Counselor A":250000}}
+INCENTIVE_SLABS_JSON=[{"threshold":2300000,"incentive":5000},{"threshold":2400000,"incentive":7000},{"threshold":2500000,"incentive":10000}]
+```
+
+Targets are optional; without them, achievement shows `No target` rather than assuming a target.
+
 Never commit API keys, dashboard passwords, customer data, or raw sales data to this public repository.
 
 ## Run locally
