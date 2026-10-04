@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: testbook-sales-dashboard
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: TESTBOOK_API_URL
+        sync: false
+      - key: TESTBOOK_API_KEY
+        sync: false
+      - key: DASHBOARD_USER
+        sync: false
+      - key: DASHBOARD_PASSWORD
+        sync: false
