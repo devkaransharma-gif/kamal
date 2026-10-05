@@ -157,16 +157,21 @@ function dateWisePerformance(records, referenceDate = new Date()) {
 }
 
 
+function counselorKey(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
 function counselorLeadCounts(records, referenceDate = new Date()) {
   const counts = new Map();
   let validLeadDates = 0;
   for (const r of records) {
-    const counselor = String(r.counselor || '').trim() || 'Unknown';
+    const counselor = String(r.counselor || '').trim().replace(/\s+/g, ' ') || 'Unknown';
+    const key = counselorKey(counselor);
     if (normalizeDate(r.leadDate)) validLeadDates++;
-    if (!counts.has(counselor)) counts.set(counselor, {
+    if (!counts.has(key)) counts.set(key, {
       manager: r.manager || 'Unknown', tl: r.tl || 'Unknown', counselor, leads: 0
     });
-    counts.get(counselor).leads += 1;
+    counts.get(key).leads += 1;
   }
   return { counts, validLeadDates, usedMtdDates: false };
 }
@@ -277,16 +282,18 @@ function buildSummary(records, referenceDate = new Date()) {
   const leadResult = counselorLeadCounts(records, referenceDate);
   const counselorMap = new Map();
   for (const lead of leadResult.counts.values()) {
-    counselorMap.set(lead.counselor, {
+    counselorMap.set(counselorKey(lead.counselor), {
       manager: lead.manager, tl: lead.tl, counselor: lead.counselor,
       leads: lead.leads, revenue: 0, orders: 0, todayRevenue: 0
     });
   }
   for (const sale of salesCounselors) {
-    const counselor = String(sale.counselor || '').trim() || 'Unknown';
-    const existing = counselorMap.get(counselor);
-    counselorMap.set(counselor, {
-      ...(existing || {}), ...sale, counselor, leads: existing?.leads || 0
+    const counselor = String(sale.counselor || '').trim().replace(/\s+/g, ' ') || 'Unknown';
+    const key = counselorKey(counselor);
+    const existing = counselorMap.get(key);
+    counselorMap.set(key, {
+      ...(existing || {}), ...sale, counselor,
+      leads: existing?.leads || 0
     });
   }
 
