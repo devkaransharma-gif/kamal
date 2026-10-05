@@ -25,7 +25,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;bor
 </div>
 <div class="panel">
 <div class="tabs">
-<button class="tab active" data-tab="managers">Manager</button><button class="tab" data-tab="tls">TL</button><button class="tab" data-tab="counselors">Counselor</button><button class="tab" data-tab="products">Product</button>
+<button class="tab active" data-tab="managers">Manager</button><button class="tab" data-tab="tls">TL</button><button class="tab" data-tab="counselors">Counselor</button><button class="tab" data-tab="products">Product</button><button class="tab" data-tab="dateWise">Date-wise</button>
 </div>
 <div class="filters"><select id="managerFilter"><option value="">All Managers</option></select><select id="tlFilter"><option value="">All TLs</option></select></div>
 <table><thead><tr id="head"></tr></thead><tbody id="rows"><tr><td>Loading…</td></tr></tbody></table>
@@ -52,11 +52,12 @@ function populateFilters(){
 }
 function render(){
  let list=data?.[mode]||[];const manager=document.getElementById("managerFilter").value,tl=document.getElementById("tlFilter").value;
- if(mode==="tls")list=list.filter(x=>!manager||x.manager===manager);
+ if(mode==="dateWise"){list=[...list].sort((a,b)=>a.date.localeCompare(b.date));}\n if(mode==="tls")list=list.filter(x=>!manager||x.manager===manager);
  if(mode==="counselors")list=list.filter(x=>(!manager||x.manager===manager)&&(!tl||x.tl===tl));
- const heads={managers:["Rank","Manager","Today","MTD Revenue","Target","Achievement","Orders","Incentive"],tls:["Rank","Manager","TL","Today","MTD Revenue","Target","Achievement","Orders"],counselors:["Rank","Manager","TL","Counselor","Today","MTD Revenue","Target","Achievement","Orders"],products:["Rank","Product","Today","MTD Revenue","Orders","Contribution"]};
+ const heads={dateWise:["Date","Leads","Sales","CVR","Revenue"],managers:["Rank","Manager","Today","MTD Revenue","Target","Achievement","Orders","Incentive"],tls:["Rank","Manager","TL","Today","MTD Revenue","Target","Achievement","Orders"],counselors:["Rank","Manager","TL","Counselor","Today","MTD Revenue","Target","Achievement","Orders"],products:["Rank","Product","Today","MTD Revenue","Orders","Contribution"]};
  document.getElementById("head").innerHTML=heads[mode].map((h,i)=>'<th class="'+(["Today","MTD Revenue","Target","Achievement","Orders","Contribution","Incentive"].includes(h)?"right":"")+'">'+h+"</th>").join("");
  document.getElementById("rows").innerHTML=list.length?list.map((x,i)=>{
+  if(mode==="dateWise")return '<tr><td><b>'+esc(x.date)+'</b></td><td class="right">'+x.leads.toLocaleString("en-IN")+'</td><td class="right">'+x.sales.toLocaleString("en-IN")+'</td><td class="right">'+pct(x.cvr)+'</td><td class="right">'+money(x.revenue)+'</td></tr>';
   if(mode==="managers")return '<tr><td>'+ (i+1)+'</td><td><b>'+esc(x.manager)+'</b></td><td class="right">'+money(x.todayRevenue)+'</td><td class="right">'+money(x.revenue)+'</td><td class="right">'+money(x.target)+'</td><td class="right">'+badge(x.achievement)+'</td><td class="right">'+x.orders+'</td><td class="right">'+(x.incentive?.current?money(x.incentive.current.incentive):"—")+'</td></tr>';
   if(mode==="tls")return '<tr><td>'+(i+1)+'</td><td>'+esc(x.manager)+'</td><td><b>'+esc(x.tl)+'</b></td><td class="right">'+money(x.todayRevenue)+'</td><td class="right">'+money(x.revenue)+'</td><td class="right">'+money(x.target)+'</td><td class="right">'+badge(x.achievement)+'</td><td class="right">'+x.orders+'</td></tr>';
   if(mode==="counselors")return '<tr><td>'+(i+1)+'</td><td>'+esc(x.manager)+'</td><td>'+esc(x.tl)+'</td><td><b>'+esc(x.counselor)+'</b></td><td class="right">'+money(x.todayRevenue)+'</td><td class="right">'+money(x.revenue)+'</td><td class="right">'+money(x.target)+'</td><td class="right">'+badge(x.achievement)+'</td><td class="right">'+x.orders+'</td></tr>';
