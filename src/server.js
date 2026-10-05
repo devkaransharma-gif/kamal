@@ -15,7 +15,26 @@ function sendJson(res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 function csvEscape(value) { const text = value == null ? "" : String(value); return /[",\n\r]/.test(text) ? "\"" + text.replace(/"/g, '\"') + "\"" : text; }
-function sendCsv(res, rows) { const headers = ["Lead ID","Assign Date","Counselor","Manager","TL","Sale Date","Sale Product","Sale Amount","Sale Agent","Sale Number"]; const lines = [headers.join(",")]; for (const r of rows) lines.push([r.Lead_id,r.Assign_Date || r.assignOn,r.assign_BD,r.ASM,r.team_name,r.Sale_Date,r.Sale_Product,r.Sale_Amount,r.Sale_Agent,r.Sale_Number].map(csvEscape).join(",")); res.writeHead(200, {"Content-Type":"text/csv; charset=utf-8","Content-Disposition":"attachment; filename=\"testbook-sales-export.csv\"","Cache-Control":"no-store"}); res.end("\uFEFF" + lines.join("\r\n")); }
+function sendCsv(res, rows) {
+  const headers = ["Lead ID","Assign Date","Counselor","Manager","TL","Sale Date","Sale Product","Sale Amount","Sale Agent","Sale Number"];
+  const lines = [headers.join(",")];
+  for (const r of rows) {
+    lines.push([
+      r._id_lId || r.Lead_id,
+      r._id_assignedOn || r.Assign_Date || r.assignOn,
+      r._id_agentName || r._id_assign_BD || r.assign_BD,
+      r._id_teamName || r.ASM,
+      r._id_teamName || r.team_name,
+      r.Sale_Date || r._id_Converted_Date,
+      r.Sale_Product || r._id_product,
+      r.Sale_Amount,
+      r.Sale_Agent || r._id_agentName,
+      r.Sale_Number
+    ].map(csvEscape).join(","));
+  }
+  res.writeHead(200, {"Content-Type":"text/csv; charset=utf-8","Content-Disposition":"attachment; filename=\"testbook-sales-export.csv\"","Cache-Control":"no-store"});
+  res.end("\uFEFF" + lines.join("\r\n"));
+}
 function sendHtml(res) {
   res.writeHead(200, {"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});
   res.end(dashboard);
