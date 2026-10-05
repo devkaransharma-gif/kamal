@@ -28,7 +28,7 @@ function normalizeDate(value) {
   if (!raw) return null;
 
   // Unix timestamp support (seconds or milliseconds).
-  if (/^\\d{10,13}$/.test(raw)) {
+  if (/^\d{10,13}$/.test(raw)) {
     const n = Number(raw);
     const parsed = new Date(raw.length === 10 ? n * 1000 : n);
     if (!Number.isNaN(parsed.getTime())) return parsed;
@@ -47,7 +47,7 @@ function normalizeDate(value) {
   }
 
   // YYYY/MM/DD and YYYY-MM-DD variants.
-  const ymd = raw.match(/^(\\d{4})[\\/\\-.](\\d{1,2})[\\/\\-.](\\d{1,2})(?:[ T].*)?$/);
+  const ymd = raw.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})(?:[ T].*)?$/);
   if (ymd) {
     const year = Number(ymd[1]);
     const month = Number(ymd[2]) - 1;
@@ -63,7 +63,7 @@ function normalizeDate(value) {
   if (!Number.isNaN(timestamp)) return new Date(timestamp);
 
   // Common textual date format such as "04 Oct 2026".
-  const textual = raw.match(/^(\\d{1,2})[ -]([A-Za-z]{3,9})[ -](\\d{4})(?:[ T].*)?$/);
+  const textual = raw.match(/^(\d{1,2})[ -]([A-Za-z]{3,9})[ -](\d{4})(?:[ T].*)?$/);
   if (textual) {
     const parsed = new Date(raw);
     if (!Number.isNaN(parsed.getTime())) return parsed;
