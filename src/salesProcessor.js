@@ -158,25 +158,17 @@ function dateWisePerformance(records, referenceDate = new Date()) {
 
 
 function counselorLeadCounts(records, referenceDate = new Date()) {
-  const mtdStart = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
-  const validLeadDates = records.filter(r => normalizeDate(r.leadDate)).length;
-  const useMtdDates = validLeadDates > 0;
   const counts = new Map();
-
+  let validLeadDates = 0;
   for (const r of records) {
-    const leadDate = normalizeDate(r.leadDate);
-    if (useMtdDates && (!leadDate || leadDate < mtdStart || leadDate > referenceDate)) continue;
-
-    const manager = r.manager || "Unknown";
-    const tl = r.tl || "Unknown";
-    const counselor = r.counselor || "Unknown";
-    const key = [manager, tl, counselor].join("|||");
-
-    if (!counts.has(key)) counts.set(key, { manager, tl, counselor, leads: 0 });
-    counts.get(key).leads += 1;
+    const counselor = String(r.counselor || '').trim() || 'Unknown';
+    if (normalizeDate(r.leadDate)) validLeadDates++;
+    if (!counts.has(counselor)) counts.set(counselor, {
+      manager: r.manager || 'Unknown', tl: r.tl || 'Unknown', counselor, leads: 0
+    });
+    counts.get(counselor).leads += 1;
   }
-
-  return { counts, validLeadDates, usedMtdDates: useMtdDates };
+  return { counts, validLeadDates, usedMtdDates: false };
 }
 function managerWiseRevenue(records) { return aggregateBy(records, "manager", "manager"); }
 function tlWiseRevenue(records) { return aggregateBy(records, "tl", "tl"); }
@@ -283,33 +275,18 @@ function buildSummary(records, referenceDate = new Date()) {
   const tls = hierarchyLevel(mtdRecords,todayRecords,["manager","tl"],"tl");
   const salesCounselors = hierarchyLevel(mtdRecords,todayRecords,["manager","tl","counselor"],"counselor");
   const leadResult = counselorLeadCounts(records, referenceDate);
-  const salesMap = new Map(
-    salesCounselors.map(row => [
-      [row.manager || "Unknown", row.tl || "Unknown", row.counselor || "Unknown"].join("|||"),
-      row
-    ])
-  );
-
   const counselorMap = new Map();
   for (const lead of leadResult.counts.values()) {
-    const key = [lead.manager, lead.tl, lead.counselor].join("|||");
-    counselorMap.set(key, {
-      manager: lead.manager,
-      tl: lead.tl,
-      counselor: lead.counselor,
-      leads: lead.leads,
-      revenue: 0,
-      orders: 0,
-      todayRevenue: 0
+    counselorMap.set(lead.counselor, {
+      manager: lead.manager, tl: lead.tl, counselor: lead.counselor,
+      leads: lead.leads, revenue: 0, orders: 0, todayRevenue: 0
     });
   }
-
   for (const sale of salesCounselors) {
-    const key = [sale.manager || "Unknown", sale.tl || "Unknown", sale.counselor || "Unknown"].join("|||");
-    counselorMap.set(key, {
-      ...counselorMap.get(key),
-      ...sale,
-      leads: counselorMap.get(key)?.leads || 0
+    const counselor = String(sale.counselor || '').trim() || 'Unknown';
+    const existing = counselorMap.get(counselor);
+    counselorMap.set(counselor, {
+      ...(existing || {}), ...sale, counselor, leads: existing?.leads || 0
     });
   }
 
