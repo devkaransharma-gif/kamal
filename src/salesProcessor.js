@@ -159,18 +159,24 @@ function dateWisePerformance(records, referenceDate = new Date()) {
 
 function counselorLeadCounts(records, referenceDate = new Date()) {
   const mtdStart = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+  const validLeadDates = records.filter(r => normalizeDate(r.leadDate)).length;
+  const useMtdDates = validLeadDates > 0;
   const counts = new Map();
+
   for (const r of records) {
     const leadDate = normalizeDate(r.leadDate);
-    if (!leadDate || leadDate < mtdStart || leadDate > referenceDate) continue;
+    if (useMtdDates && (!leadDate || leadDate < mtdStart || leadDate > referenceDate)) continue;
+
     const manager = r.manager || "Unknown";
     const tl = r.tl || "Unknown";
     const counselor = r.counselor || "Unknown";
     const key = [manager, tl, counselor].join("|||");
+
     if (!counts.has(key)) counts.set(key, { manager, tl, counselor, leads: 0 });
     counts.get(key).leads += 1;
   }
-  return counts;
+
+  return { counts, validLeadDates, usedMtdDates: useMtdDates };
 }
 function managerWiseRevenue(records) { return aggregateBy(records, "manager", "manager"); }
 function tlWiseRevenue(records) { return aggregateBy(records, "tl", "tl"); }
@@ -275,12 +281,49 @@ function buildSummary(records, referenceDate = new Date()) {
   const slabs = parseJsonEnv("INCENTIVE_SLABS_JSON", []);
   const managers = hierarchyLevel(mtdRecords,todayRecords,["manager"],"manager");
   const tls = hierarchyLevel(mtdRecords,todayRecords,["manager","tl"],"tl");
-  const counselors = hierarchyLevel(mtdRecords,todayRecords,["manager","tl","counselor"],"counselor");
-  const leadCounts = counselorLeadCounts(records, referenceDate);
-  for (const counselor of counselors) {
-    const key = [counselor.manager || "Unknown", counselor.tl || "Unknown", counselor.counselor || "Unknown"].join("|||");
-    counselor.leads = leadCounts.get(key)?.leads || 0;
+  const salesCounselors = hierarchyLevel(mtdRecords,todayRecords,["manager","tl","counselor"],"counselor");
+  const leadResult = counselorLeadCounts(records, referenceDate);
+  const salesMap = new Map(
+    salesCounselors.map(row => [
+      [row.manager || "Unknown", row.tl || "Unknown", row.counselor || "Unknown"].join("|||"),
+      row
+    ])
+  );
+
+  const counselorMap = new Map();
+  for (const lead of leadResult.counts.values()) {
+    const key = [lead.manager, lead.tl, lead.counselor].join("|||");
+    counselorMap.set(key, {
+      manager: lead.manager,
+      tl: lead.tl,
+      counselor: lead.counselor,
+      leads: lead.leads,
+      revenue: 0,
+      orders: 0,
+      todayRevenue: 0
+    });
   }
+
+  for (const sale of salesCounselors) {
+    const key = [sale.manager || "Unknown", sale.tl || "Unknown", sale.counselor || "Unknown"].join("|||");
+    counselorMap.set(key, {
+      ...counselorMap.get(key),
+      ...sale,
+      leads: counselorMap.get(key)?.leads || 0
+    });
+  }
+
+  const counselors = [...counselorMap.values()]
+    .sort((a,b) => b.revenue - a.revenue || b.leads - a.leads);
+
+  console.log("COUNSELOR LEADS:", JSON.stringify({
+    sourceRows: records.length,
+    validLeadDates: leadResult.validLeadDates,
+    usedMtdDates: leadResult.usedMtdDates,
+    counselorCount: counselors.length,
+    totalLeads: counselors.reduce((sum, row) => sum + row.leads, 0)
+  }));
+
   const products = hierarchyLevel(mtdRecords,todayRecords,["product"],"product");
   return {
     generatedAt: new Date().toISOString(),
