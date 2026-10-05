@@ -83,7 +83,8 @@ function first(row, keys) {
 
 function normalizeSales(payload) {
   return getRows(payload).map((row) => ({
-    date: first(row, ["date","Date","Sale_Date","sale_date","Sale Date","created_at","createdAt","createdAtUtc","order_date","Order Date","transaction_date","Transaction Date","payment_date","Payment Date","purchase_date","Purchase Date","created_on","Created On","timestamp","Timestamp","datetime","DateTime"]),\n    leadDate: first(row, ["Assign_Date","assignOn","assign_date","Assign Date","lead_date","Lead Date","created_at","createdAt"]),
+    date: first(row, ["date","Date","Sale_Date","sale_date","Sale Date","created_at","createdAt","createdAtUtc","order_date","Order Date","transaction_date","Transaction Date","payment_date","Payment Date","purchase_date","Purchase Date","created_on","Created On","timestamp","Timestamp","datetime","DateTime"]),
+    leadDate: first(row, ["Assign_Date","assignOn","assign_date","Assign Date","lead_date","Lead Date","created_at","createdAt"]),
     manager: first(row, ["manager","Manager","manager_name","Manager Name","ASM","asm","Sale_Team","Sale Team"]),
     tl: first(row, ["tl","TL","team_leader","teamLeader","team_leader_name","TL Name","team_name","Team Name"]),
     counselor: first(row, ["counselor","Counselor","counsellor","Counsellor","counselor_name","Counselor Name","agent","Agent","Sale_Agent","Sale Agent"]),
@@ -271,7 +272,8 @@ function buildSummary(records, referenceDate = new Date()) {
     managers: enrich(managers,"manager",targets,slabs),
     tls: enrich(tls,"tl",targets,slabs),
     counselors: enrich(counselors,"counselor",targets,slabs),
-    products: products.map(p=>({...p, contribution: sum(mtdRecords)>0 ? (p.revenue/sum(mtdRecords))*100 : 0})),\n    dateWise: dateWisePerformance(records, referenceDate),
+    products: products.map(p=>({...p, contribution: sum(mtdRecords)>0 ? (p.revenue/sum(mtdRecords))*100 : 0})),
+    dateWise: dateWisePerformance(records, referenceDate),
     managerRevenue: enrich(managerWiseRevenue(records),"manager",targets,slabs),
     tlRevenue: enrich(tlWiseRevenue(records),"tl",targets,slabs),
     incentiveSlabs: slabs
