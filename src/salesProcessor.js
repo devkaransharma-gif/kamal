@@ -87,7 +87,7 @@ function normalizeSales(payload) {
     leadDate: first(row, ["Assign_Date","assignOn","assign_date","Assign Date","lead_date","Lead Date","created_at","createdAt"]),
     manager: first(row, ["manager","Manager","manager_name","Manager Name","ASM","asm","Sale_Team","Sale Team"]),
     tl: first(row, ["tl","TL","team_leader","teamLeader","team_leader_name","TL Name","team_name","Team Name"]),
-    counselor: first(row, ["counselor","Counselor","counsellor","Counsellor","counselor_name","Counselor Name","agent","Agent","Sale_Agent","Sale Agent"]),
+    counselor: first(row, ["counselor","Counselor","counsellor","Counsellor","counselor_name","Counselor Name","agent","Agent","Sale_Agent","Sale Agent","assign_BD","Assign_BD","assign_bd","Emp_id","employeeEmail"]),
     revenue: toNumber(first(row, ["revenue","Revenue","amount","Amount","paid_amount","Paid Amount","net_revenue","Net Revenue","Sale_Amount","Sale Amount"])),
     product: first(row, ["product","Product","course","Course","product_name","Product Name","course_name","Course Name","Sale_Product","Sale Product"]),
     orderId: first(row, ["orderId","order_id","Order ID","order","Order","transaction_id","Transaction ID","Sale_Number","Sale Number"])
@@ -156,6 +156,22 @@ function dateWisePerformance(records, referenceDate = new Date()) {
     .map(x => ({ ...x, cvr: x.leads > 0 ? (x.sales / x.leads) * 100 : 0 }));
 }
 
+
+function counselorLeadCounts(records, referenceDate = new Date()) {
+  const mtdStart = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+  const counts = new Map();
+  for (const r of records) {
+    const leadDate = normalizeDate(r.leadDate);
+    if (!leadDate || leadDate < mtdStart || leadDate > referenceDate) continue;
+    const manager = r.manager || "Unknown";
+    const tl = r.tl || "Unknown";
+    const counselor = r.counselor || "Unknown";
+    const key = [manager, tl, counselor].join("|||");
+    if (!counts.has(key)) counts.set(key, { manager, tl, counselor, leads: 0 });
+    counts.get(key).leads += 1;
+  }
+  return counts;
+}
 function managerWiseRevenue(records) { return aggregateBy(records, "manager", "manager"); }
 function tlWiseRevenue(records) { return aggregateBy(records, "tl", "tl"); }
 function counselorWiseRevenue(records) { return aggregateBy(records, "counselor", "counselor"); }
@@ -260,6 +276,11 @@ function buildSummary(records, referenceDate = new Date()) {
   const managers = hierarchyLevel(mtdRecords,todayRecords,["manager"],"manager");
   const tls = hierarchyLevel(mtdRecords,todayRecords,["manager","tl"],"tl");
   const counselors = hierarchyLevel(mtdRecords,todayRecords,["manager","tl","counselor"],"counselor");
+  const leadCounts = counselorLeadCounts(records, referenceDate);
+  for (const counselor of counselors) {
+    const key = [counselor.manager || "Unknown", counselor.tl || "Unknown", counselor.counselor || "Unknown"].join("|||");
+    counselor.leads = leadCounts.get(key)?.leads || 0;
+  }
   const products = hierarchyLevel(mtdRecords,todayRecords,["product"],"product");
   return {
     generatedAt: new Date().toISOString(),
