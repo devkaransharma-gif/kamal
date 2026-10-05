@@ -50,7 +50,7 @@ async function getTestbookSales() {
     });
 
     // Safe diagnostics: log counts only; never row values or API credentials.
-    console.log("SALE FIELD COUNTS:", JSON.stringify({ saleDate: rows.filter(r => r.Sale_Date != null && String(r.Sale_Date).trim() !== "").length, saleAmount: rows.filter(r => r.Sale_Amount != null && String(r.Sale_Amount).trim() !== "").length }));
+    console.log("SALE FIELD COUNTS:", JSON.stringify({ saleDate: rows.filter(r => r.Sale_Date != null && String(r.Sale_Date).trim() !== "").length, saleAmount: rows.filter(r => r.Sale_Amount != null && String(r.Sale_Amount).trim() !== "").length, saleAgent: rows.filter(r => r.Sale_Agent != null && String(r.Sale_Agent).trim() !== "").length, saleNumber: rows.filter(r => r.Sale_Number != null && String(r.Sale_Number).trim() !== "").length }));
     console.log("TESTBOOK DATA:", JSON.stringify({
       format: "csv",
       rows: rows.length,
