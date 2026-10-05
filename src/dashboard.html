@@ -31,48 +31,176 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;bor
 <table><thead><tr id="head"></tr></thead><tbody id="rows"><tr><td>Loading…</td></tr></tbody></table>
 </div></div>
 <script>
-let data=null,mode="managers";
-const money=n=>"₹"+Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:0});
-const pct=n=>n==null?"—":Number(n).toFixed(1)+"%";
-const esc=v=>String(v??"Unknown").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
-function badge(a){if(a==null)return '<span class="badge neutral">No target</span>';const c=a>=100?"good":a>=80?"warn":"bad";return '<span class="badge '+c+'">'+pct(a)+'</span>'}
-async function load(){
- try{const r=await fetch("/sales/summary",{cache:"no-store"});if(!r.ok)throw new Error("API returned "+r.status);data=await r.json();
- document.getElementById("todayRevenue").textContent=money(data.todayRevenue);document.getElementById("mtdRevenue").textContent=money(data.mtdRevenue);
- document.getElementById("todayOrders").textContent=(data.todayOrders||0).toLocaleString("en-IN");document.getElementById("mtdOrders").textContent=(data.mtdOrders||0).toLocaleString("en-IN");
- const target=(data.managers||[]).reduce((s,x)=>s+(x.target||0),0);document.getElementById("mtdTarget").textContent=money(target);
- document.getElementById("achievement").textContent=target?pct(data.mtdRevenue/target*100):"—";
- document.getElementById("status").textContent="Updated "+new Date().toLocaleString("en-IN");populateFilters();render();
- }catch(e){document.getElementById("status").innerHTML='<span class="error">Dashboard error: '+esc(e.message)+'</span>'}
+let data = null;
+let mode = "managers";
+
+const money = n => "₹" + Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+const pct = n => n == null ? "—" : Number(n).toFixed(1) + "%";
+const esc = v => String(v ?? "Unknown").replace(/[&<>"']/g, c => ({
+  "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+}[c]));
+
+function badge(a) {
+  if (a == null) return '<span class="badge neutral">No target</span>';
+  const cls = a >= 100 ? "good" : a >= 80 ? "warn" : "bad";
+  return '<span class="badge ' + cls + '">' + pct(a) + '</span>';
 }
-function populateFilters(){
- const managers=[...new Set((data.tls||[]).map(x=>x.manager))].sort();const tls=[...new Set((data.counselors||[]).map(x=>x.tl))].sort();
- const mf=document.getElementById("managerFilter"),tf=document.getElementById("tlFilter"),mv=mf.value,tv=tf.value;
- mf.innerHTML='<option value="">All Managers</option>'+managers.map(x=>'<option>'+esc(x)+'</option>').join("");tf.innerHTML='<option value="">All TLs</option>'+tls.map(x=>'<option>'+esc(x)+'</option>').join("");mf.value=managers.includes(mv)?mv:"";tf.value=tls.includes(tv)?tv:"";
+
+async function load() {
+  try {
+    const r = await fetch("/sales/summary", { cache: "no-store" });
+    if (!r.ok) throw new Error("API returned " + r.status);
+    data = await r.json();
+
+    document.getElementById("todayRevenue").textContent = money(data.todayRevenue);
+    document.getElementById("mtdRevenue").textContent = money(data.mtdRevenue);
+    document.getElementById("todayOrders").textContent = Number(data.todayOrders || 0).toLocaleString("en-IN");
+    document.getElementById("mtdOrders").textContent = Number(data.mtdOrders || 0).toLocaleString("en-IN");
+
+    const target = (data.managers || []).reduce((s, x) => s + Number(x.target || 0), 0);
+    document.getElementById("mtdTarget").textContent = money(target);
+    document.getElementById("achievement").textContent = target ? pct(Number(data.mtdRevenue || 0) / target * 100) : "—";
+
+    document.getElementById("status").textContent = "Updated " + new Date().toLocaleString("en-IN");
+    populateFilters();
+    render();
+  } catch (e) {
+    document.getElementById("status").innerHTML =
+      '<span class="error">Dashboard error: ' + esc(e.message) + '</span>';
+  }
 }
-function render(){
- let list=data?.[mode]||[];const manager=document.getElementById("managerFilter").value,tl=document.getElementById("tlFilter").value;
- if(mode==="dateWise"){
-  const range=document.getElementById("dateRange").value;
-  const now=new Date(); const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-  if(range==="last7") start.setDate(start.getDate()-6);
-  if(range==="last30") start.setDate(start.getDate()-29);
-  list=list.filter(x=>{const d=new Date(x.date+"T00:00:00"); return d>=start && d<=now;});
-  list=[...list].sort((a,b)=>a.date.localeCompare(b.date));
+
+function populateFilters() {
+  const managers = [...new Set((data.tls || []).map(x => x.manager))].filter(Boolean).sort();
+  const tls = [...new Set((data.counselors || []).map(x => x.tl))].filter(Boolean).sort();
+
+  const mf = document.getElementById("managerFilter");
+  const tf = document.getElementById("tlFilter");
+  const mv = mf.value;
+  const tv = tf.value;
+
+  mf.innerHTML = '<option value="">All Managers</option>' +
+    managers.map(x => '<option value="' + esc(x) + '">' + esc(x) + '</option>').join("");
+
+  tf.innerHTML = '<option value="">All TLs</option>' +
+    tls.map(x => '<option value="' + esc(x) + '">' + esc(x) + '</option>').join("");
+
+  mf.value = managers.includes(mv) ? mv : "";
+  tf.value = tls.includes(tv) ? tv : "";
 }
- if(mode==="tls")list=list.filter(x=>!manager||x.manager===manager);
- if(mode==="counselors")list=list.filter(x=>(!manager||x.manager===manager)&&(!tl||x.tl===tl));
- const heads={dateWise:["Date","Leads","Sales","CVR","Revenue"],managers:["Rank","Manager","Today","MTD Revenue","Target","Achievement","Orders","Incentive"],tls:["Rank","Manager","TL","Today","MTD Revenue","Target","Achievement","Orders"],counselors:["Rank","Manager","TL","Counselor","Today","MTD Revenue","Target","Achievement","Orders"],products:["Rank","Product","Today","MTD Revenue","Orders","Contribution"]};
- document.getElementById("head").innerHTML=heads[mode].map((h,i)=>'<th class="'+(["Today","MTD Revenue","Target","Achievement","Orders","Contribution","Incentive"].includes(h)?"right":"")+'">'+h+"</th>").join("");
- document.getElementById("rows").innerHTML=list.length?list.map((x,i)=>{
-  if(mode==="dateWise")return '<tr><td><b>'+esc(x.date)+'</b></td><td class="right">'+x.leads.toLocaleString("en-IN")+'</td><td class="right">'+x.sales.toLocaleString("en-IN")+'</td><td class="right">'+pct(x.cvr)+'</td><td class="right">'+money(x.revenue)+'</td></tr>';
-  if(mode==="managers")return '<tr><td>'+ (i+1)+'</td><td><b>'+esc(x.manager)+'</b></td><td class="right">'+money(x.todayRevenue)+'</td><td class="right">'+money(x.revenue)+'</td><td class="right">'+money(x.target)+'</td><td class="right">'+badge(x.achievement)+'</td><td class="right">'+x.orders+'</td><td class="right">'+(x.incentive?.current?money(x.incentive.current.incentive):"—")+'</td></tr>';
-  if(mode==="tls")return '<tr><td>'+(i+1)+'</td><td>'+esc(x.manager)+'</td><td><b>'+esc(x.tl)+'</b></td><td class="right">'+money(x.todayRevenue)+'</td><td class="right">'+money(x.revenue)+'</td><td class="right">'+money(x.target)+'</td><td class="right">'+badge(x.achievement)+'</td><td class="right">'+x.orders+'</td></tr>';
-  if(mode==="counselors")return '<tr><td>'+(i+1)+'</td><td>'+esc(x.manager)+'</td><td>'+esc(x.tl)+'</td><td><b>'+esc(x.counselor)+'</b></td><td class="right">'+money(x.todayRevenue)+'</td><td class="right">'+money(x.revenue)+'</td><td class="right">'+money(x.target)+'</td><td class="right">'+badge(x.achievement)+'</td><td class="right">'+x.orders+'</td></tr>';
-  return '<tr><td>'+(i+1)+'</td><td><b>'+esc(x.product)+'</b></td><td class="right">'+money(x.todayRevenue)+'</td><td class="right">'+money(x.revenue)+'</td><td class="right">'+x.orders+'</td><td class="right">'+pct(x.contribution)+'</td></tr>';
- }).join(""):'<tr><td colspan="9">No data available</td></tr>';
+
+function render() {
+  if (!data) return;
+
+  let list = Array.isArray(data[mode]) ? [...data[mode]] : [];
+  const manager = document.getElementById("managerFilter").value;
+  const tl = document.getElementById("tlFilter").value;
+
+  if (mode === "dateWise") {
+    const range = document.getElementById("dateRange").value;
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (range === "last7") start.setDate(start.getDate() - 6);
+    if (range === "last30") start.setDate(start.getDate() - 29);
+
+    list = list.filter(x => {
+      const d = new Date(String(x.date) + "T00:00:00");
+      return !Number.isNaN(d.getTime()) && d >= start && d <= now;
+    });
+
+    list.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  }
+
+  if (mode === "tls") {
+    list = list.filter(x => !manager || x.manager === manager);
+  }
+
+  if (mode === "counselors") {
+    list = list.filter(x =>
+      (!manager || x.manager === manager) &&
+      (!tl || x.tl === tl)
+    );
+  }
+
+  const heads = {
+    dateWise: ["Date", "Leads", "Sales", "CVR", "Revenue"],
+    managers: ["Rank", "Manager", "Today", "MTD Revenue", "Target", "Achievement", "Orders", "Incentive"],
+    tls: ["Rank", "Manager", "TL", "Today", "MTD Revenue", "Target", "Achievement", "Orders"],
+    counselors: ["Rank", "Manager", "TL", "Counselor", "Today", "MTD Revenue", "Target", "Achievement", "Orders"],
+    products: ["Rank", "Product", "Today", "MTD Revenue", "Orders", "Contribution"]
+  };
+
+  document.getElementById("head").innerHTML = heads[mode].map(h => {
+    const right = ["Today", "MTD Revenue", "Target", "Achievement", "Orders", "Contribution", "Incentive"].includes(h);
+    return '<th class="' + (right ? "right" : "") + '">' + h + '</th>';
+  }).join("");
+
+  if (!list.length) {
+    document.getElementById("rows").innerHTML = '<tr><td colspan="9">No data available</td></tr>';
+    return;
+  }
+
+  document.getElementById("rows").innerHTML = list.map((x, i) => {
+    if (mode === "dateWise") {
+      return '<tr><td><b>' + esc(x.date) + '</b></td>' +
+        '<td class="right">' + Number(x.leads || 0).toLocaleString("en-IN") + '</td>' +
+        '<td class="right">' + Number(x.sales || 0).toLocaleString("en-IN") + '</td>' +
+        '<td class="right">' + pct(x.cvr) + '</td>' +
+        '<td class="right">' + money(x.revenue) + '</td></tr>';
+    }
+
+    if (mode === "managers") {
+      return '<tr><td>' + (i + 1) + '</td><td><b>' + esc(x.manager) + '</b></td>' +
+        '<td class="right">' + money(x.todayRevenue) + '</td>' +
+        '<td class="right">' + money(x.revenue) + '</td>' +
+        '<td class="right">' + money(x.target) + '</td>' +
+        '<td class="right">' + badge(x.achievement) + '</td>' +
+        '<td class="right">' + Number(x.orders || 0) + '</td>' +
+        '<td class="right">' + (x.incentive && x.incentive.current ? money(x.incentive.current.incentive) : "—") + '</td></tr>';
+    }
+
+    if (mode === "tls") {
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(x.manager) + '</td>' +
+        '<td><b>' + esc(x.tl) + '</b></td>' +
+        '<td class="right">' + money(x.todayRevenue) + '</td>' +
+        '<td class="right">' + money(x.revenue) + '</td>' +
+        '<td class="right">' + money(x.target) + '</td>' +
+        '<td class="right">' + badge(x.achievement) + '</td>' +
+        '<td class="right">' + Number(x.orders || 0) + '</td></tr>';
+    }
+
+    if (mode === "counselors") {
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(x.manager) + '</td>' +
+        '<td>' + esc(x.tl) + '</td><td><b>' + esc(x.counselor) + '</b></td>' +
+        '<td class="right">' + money(x.todayRevenue) + '</td>' +
+        '<td class="right">' + money(x.revenue) + '</td>' +
+        '<td class="right">' + money(x.target) + '</td>' +
+        '<td class="right">' + badge(x.achievement) + '</td>' +
+        '<td class="right">' + Number(x.orders || 0) + '</td></tr>';
+    }
+
+    return '<tr><td>' + (i + 1) + '</td><td><b>' + esc(x.product) + '</b></td>' +
+      '<td class="right">' + money(x.todayRevenue) + '</td>' +
+      '<td class="right">' + money(x.revenue) + '</td>' +
+      '<td class="right">' + Number(x.orders || 0) + '</td>' +
+      '<td class="right">' + pct(x.contribution) + '</td></tr>';
+  }).join("");
 }
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");mode=b.dataset.tab;render()});
-document.getElementById("managerFilter").onchange=render;document.getElementById("tlFilter").onchange=render;document.getElementById("dateRange").onchange=render;
-load();setInterval(load,60000);
+
+document.querySelectorAll(".tab").forEach(button => {
+  button.onclick = () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    button.classList.add("active");
+    mode = button.dataset.tab;
+    render();
+  };
+});
+
+document.getElementById("managerFilter").onchange = render;
+document.getElementById("tlFilter").onchange = render;
+document.getElementById("dateRange").onchange = render;
+
+load();
+setInterval(load, 60000);
 </script></body></html>
