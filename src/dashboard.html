@@ -127,7 +127,7 @@ function render() {
     dateWise: ["Date", "Leads", "Sales", "CVR", "Revenue"],
     managers: ["Rank", "Manager", "Today", "MTD Revenue", "Target", "Achievement", "Orders", "Incentive"],
     tls: ["Rank", "Manager", "TL", "Today", "MTD Revenue", "Target", "Achievement", "Orders"],
-    counselors: ["Rank", "Manager", "TL", "Counselor", "Today", "MTD Revenue", "Target", "Achievement", "Orders"],
+    counselors: ["Rank", "Manager", "TL", "Counselor", "Leads", "Sales", "CVR", "Today", "MTD Revenue", "Target", "Achievement", "Orders"],
     products: ["Rank", "Product", "Today", "MTD Revenue", "Orders", "Contribution"]
   };
 
@@ -171,13 +171,19 @@ function render() {
     }
 
     if (mode === "counselors") {
+      const leads = Number(x.leads || 0);
+      const sales = Number(x.orders || 0);
+      const cvr = leads > 0 ? (sales / leads) * 100 : 0;
       return '<tr><td>' + (i + 1) + '</td><td>' + esc(x.manager) + '</td>' +
         '<td>' + esc(x.tl) + '</td><td><b>' + esc(x.counselor) + '</b></td>' +
+        '<td class="right">' + leads.toLocaleString("en-IN") + '</td>' +
+        '<td class="right">' + sales.toLocaleString("en-IN") + '</td>' +
+        '<td class="right">' + pct(cvr) + '</td>' +
         '<td class="right">' + money(x.todayRevenue) + '</td>' +
         '<td class="right">' + money(x.revenue) + '</td>' +
         '<td class="right">' + money(x.target) + '</td>' +
         '<td class="right">' + badge(x.achievement) + '</td>' +
-        '<td class="right">' + Number(x.orders || 0) + '</td></tr>';
+        '<td class="right">' + sales + '</td></tr>';
     }
 
     return '<tr><td>' + (i + 1) + '</td><td><b>' + esc(x.product) + '</b></td>' +
