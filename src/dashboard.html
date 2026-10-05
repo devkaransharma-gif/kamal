@@ -52,7 +52,15 @@ function populateFilters(){
 }
 function render(){
  let list=data?.[mode]||[];const manager=document.getElementById("managerFilter").value,tl=document.getElementById("tlFilter").value;
- if(mode==="dateWise"){\n  const range=document.getElementById("dateRange").value;\n  const now=new Date(); const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());\n  if(range==="last7") start.setDate(start.getDate()-6);\n  if(range==="last30") start.setDate(start.getDate()-29);\n  list=list.filter(x=>{const d=new Date(x.date+"T00:00:00"); return d>=start && d<=now;});\n  list=[...list].sort((a,b)=>a.date.localeCompare(b.date));\n}\n if(mode==="tls")list=list.filter(x=>!manager||x.manager===manager);
+ if(mode==="dateWise"){
+  const range=document.getElementById("dateRange").value;
+  const now=new Date(); const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  if(range==="last7") start.setDate(start.getDate()-6);
+  if(range==="last30") start.setDate(start.getDate()-29);
+  list=list.filter(x=>{const d=new Date(x.date+"T00:00:00"); return d>=start && d<=now;});
+  list=[...list].sort((a,b)=>a.date.localeCompare(b.date));
+}
+ if(mode==="tls")list=list.filter(x=>!manager||x.manager===manager);
  if(mode==="counselors")list=list.filter(x=>(!manager||x.manager===manager)&&(!tl||x.tl===tl));
  const heads={dateWise:["Date","Leads","Sales","CVR","Revenue"],managers:["Rank","Manager","Today","MTD Revenue","Target","Achievement","Orders","Incentive"],tls:["Rank","Manager","TL","Today","MTD Revenue","Target","Achievement","Orders"],counselors:["Rank","Manager","TL","Counselor","Today","MTD Revenue","Target","Achievement","Orders"],products:["Rank","Product","Today","MTD Revenue","Orders","Contribution"]};
  document.getElementById("head").innerHTML=heads[mode].map((h,i)=>'<th class="'+(["Today","MTD Revenue","Target","Achievement","Orders","Contribution","Incentive"].includes(h)?"right":"")+'">'+h+"</th>").join("");
