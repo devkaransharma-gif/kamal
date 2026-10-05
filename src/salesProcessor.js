@@ -83,7 +83,7 @@ function first(row, keys) {
 
 function normalizeSales(payload) {
   return getRows(payload).map((row) => ({
-    date: first(row, ["date","Date","Sale_Date","sale_date","Sale Date","created_at","createdAt","createdAtUtc","order_date","Order Date","transaction_date","Transaction Date","payment_date","Payment Date","purchase_date","Purchase Date","created_on","Created On","timestamp","Timestamp","datetime","DateTime"]),
+    date: first(row, ["date","Date","Sale_Date","sale_date","Sale Date","created_at","createdAt","createdAtUtc","order_date","Order Date","transaction_date","Transaction Date","payment_date","Payment Date","purchase_date","Purchase Date","created_on","Created On","timestamp","Timestamp","datetime","DateTime"]),\n    leadDate: first(row, ["Assign_Date","assignOn","assign_date","Assign Date","lead_date","Lead Date","created_at","createdAt"]),
     manager: first(row, ["manager","Manager","manager_name","Manager Name","ASM","asm","Sale_Team","Sale Team"]),
     tl: first(row, ["tl","TL","team_leader","teamLeader","team_leader_name","TL Name","team_name","Team Name"]),
     counselor: first(row, ["counselor","Counselor","counsellor","Counsellor","counselor_name","Counselor Name","agent","Agent","Sale_Agent","Sale Agent"]),
@@ -117,6 +117,42 @@ function aggregateBy(records, field, label) {
     totals.set(key, current);
   }
   return [...totals.values()].sort((a, b) => b.revenue - a.revenue);
+}
+
+function dateKey(value) {
+  const d = normalizeDate(value);
+  if (!d) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function dateWisePerformance(records, referenceDate = new Date()) {
+  const mtdStart = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+  const buckets = new Map();
+
+  for (const r of records) {
+    const leadDate = normalizeDate(r.leadDate);
+    const saleDate = normalizeDate(r.date);
+
+    if (leadDate && leadDate >= mtdStart && leadDate <= referenceDate) {
+      const key = dateKey(leadDate);
+      if (!buckets.has(key)) buckets.set(key, { date: key, leads: 0, sales: 0, revenue: 0 });
+      buckets.get(key).leads += 1;
+    }
+
+    if (saleDate && saleDate >= mtdStart && saleDate <= referenceDate) {
+      const key = dateKey(saleDate);
+      if (!buckets.has(key)) buckets.set(key, { date: key, leads: 0, sales: 0, revenue: 0 });
+      buckets.get(key).sales += 1;
+      buckets.get(key).revenue += r.revenue;
+    }
+  }
+
+  return [...buckets.values()]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(x => ({ ...x, cvr: x.leads > 0 ? (x.sales / x.leads) * 100 : 0 }));
 }
 
 function managerWiseRevenue(records) { return aggregateBy(records, "manager", "manager"); }
@@ -235,7 +271,7 @@ function buildSummary(records, referenceDate = new Date()) {
     managers: enrich(managers,"manager",targets,slabs),
     tls: enrich(tls,"tl",targets,slabs),
     counselors: enrich(counselors,"counselor",targets,slabs),
-    products: products.map(p=>({...p, contribution: sum(mtdRecords)>0 ? (p.revenue/sum(mtdRecords))*100 : 0})),
+    products: products.map(p=>({...p, contribution: sum(mtdRecords)>0 ? (p.revenue/sum(mtdRecords))*100 : 0})),\n    dateWise: dateWisePerformance(records, referenceDate),
     managerRevenue: enrich(managerWiseRevenue(records),"manager",targets,slabs),
     tlRevenue: enrich(tlWiseRevenue(records),"tl",targets,slabs),
     incentiveSlabs: slabs
