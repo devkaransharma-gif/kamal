@@ -51,6 +51,13 @@ async function getTestbookSales() {
 
     // Safe diagnostics: log counts only; never row values or API credentials.
     console.log("SALE FIELD COUNTS:", JSON.stringify({ saleDate: rows.filter(r => r.Sale_Date != null && String(r.Sale_Date).trim() !== "").length, saleAmount: rows.filter(r => r.Sale_Amount != null && String(r.Sale_Amount).trim() !== "").length, saleAgent: rows.filter(r => r.Sale_Agent != null && String(r.Sale_Agent).trim() !== "").length, saleNumber: rows.filter(r => r.Sale_Number != null && String(r.Sale_Number).trim() !== "").length }));
+    console.log("ACTUAL TESTBOOK LEAD FIELD COUNTS:", JSON.stringify({
+      assignedOn: rows.filter(r => r._id_assignedOn != null && String(r._id_assignedOn).trim() !== "").length,
+      agentName: rows.filter(r => r._id_agentName != null && String(r._id_agentName).trim() !== "").length,
+      assignBD: rows.filter(r => r._id_assign_BD != null && String(r._id_assign_BD).trim() !== "").length,
+      teamName: rows.filter(r => r._id_teamName != null && String(r._id_teamName).trim() !== "").length,
+      leadId: rows.filter(r => r._id_lId != null && String(r._id_lId).trim() !== "").length
+    }));
     console.log("LEAD FIELD COUNTS:", JSON.stringify({
       assignDate: rows.filter(r => r.Assign_Date != null && String(r.Assign_Date).trim() !== "").length,
       assignOn: rows.filter(r => r.assignOn != null && String(r.assignOn).trim() !== "").length,
