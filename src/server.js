@@ -14,6 +14,8 @@ function sendJson(res, status, payload) {
   res.writeHead(status, {"Content-Type":"application/json","Cache-Control":"no-store"});
   res.end(JSON.stringify(payload));
 }
+function csvEscape(value) { const text = value == null ? "" : String(value); return /[",\n\r]/.test(text) ? "\"" + text.replace(/"/g, '\"') + "\"" : text; }
+function sendCsv(res, rows) { const headers = ["Lead ID","Assign Date","Counselor","Manager","TL","Sale Date","Sale Product","Sale Amount","Sale Agent","Sale Number"]; const lines = [headers.join(",")]; for (const r of rows) lines.push([r.Lead_id,r.Assign_Date || r.assignOn,r.assign_BD,r.ASM,r.team_name,r.Sale_Date,r.Sale_Product,r.Sale_Amount,r.Sale_Agent,r.Sale_Number].map(csvEscape).join(",")); res.writeHead(200, {"Content-Type":"text/csv; charset=utf-8","Content-Disposition":"attachment; filename=\"testbook-sales-export.csv\"","Cache-Control":"no-store"}); res.end("\uFEFF" + lines.join("\r\n")); }
 function sendHtml(res) {
   res.writeHead(200, {"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});
   res.end(dashboard);
@@ -58,6 +60,9 @@ const server=http.createServer(async(req,res)=>{
     }
     if(!validSession(req)){res.writeHead(302,{Location:"/login"});return res.end();}
     if(requestUrl.pathname==="/"||requestUrl.pathname==="/dashboard") return sendHtml(res);
+    if(requestUrl.pathname==="/sales/export.csv"&&req.method==="GET"){
+      try { return sendCsv(res, await getTestbookSales()); } catch(error) { logError("/sales/export.csv",error); return sendJson(res,500,{error:"Unable to export Testbook data."}); }
+    }
     if(requestUrl.pathname==="/sales/summary"){
       try {
         const records=normalizeSales(await getTestbookSales());
