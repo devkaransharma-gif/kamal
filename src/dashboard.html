@@ -27,7 +27,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;bor
 <div class="tabs">
 <button class="tab active" data-tab="managers">Manager</button><button class="tab" data-tab="tls">TL</button><button class="tab" data-tab="counselors">Counselor</button><button class="tab" data-tab="products">Product</button><button class="tab" data-tab="dateWise">Date-wise</button>
 </div>
-<div class="filters"><select id="managerFilter"><option value="">All Managers</option></select><select id="tlFilter"><option value="">All TLs</option></select></div>
+<div class="filters"><select id="managerFilter"><option value="">All Managers</option></select><select id="tlFilter"><option value="">All TLs</option></select><select id="dateRange"><option value="mtd">This Month</option><option value="last7">Last 7 Days</option><option value="last30">Last 30 Days</option></select></div>
 <table><thead><tr id="head"></tr></thead><tbody id="rows"><tr><td>Loading…</td></tr></tbody></table>
 </div></div>
 <script>
@@ -65,6 +65,6 @@ function render(){
  }).join(""):'<tr><td colspan="9">No data available</td></tr>';
 }
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");mode=b.dataset.tab;render()});
-document.getElementById("managerFilter").onchange=render;document.getElementById("tlFilter").onchange=render;
+document.getElementById("managerFilter").onchange=render;document.getElementById("tlFilter").onchange=render;document.getElementById("dateRange").onchange=render;
 load();setInterval(load,60000);
 </script></body></html>
